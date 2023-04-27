@@ -4,43 +4,49 @@ from tkinter import messagebox
 import random
 
 class Player:
-    def __init__(self, name, villain, score = 0, villains_played = []):
+    def __init__(self, name, villain = "", score = 0, villains_played = []):
         self.name = name
         self.villain = villain
         self.score = score    
-        self.villains = villains_played
+        self.villains_played = villains_played
 
 villains = ["Scar", "Hades", "Captain Hook", "Jafar", "Maleficent", "Prince John", "Queen of Hearts", "Ursula", "Dr. Facilier", "Evil Queen", "Ratigan", "Yzma"]
-
 villains_updated = []
-
+player_assigned_villains = []
 players = []
-
 player_entry_entries = []
-
 number_of_players = None
-
 number_of_villains = None
+villain_to_be_assigned = None
 
 def handle_enter(event):
     if frame.focus_get() == submit_button:
         number_entry(player_number_get.get(), villain_number_get.get())
     elif frame2.focus_get() == submit_button_2:
-        update_player()
+        update_player_list()
     elif frame2.focus_get() == back_button:
         go_back()
     elif frame2.focus_get() == next_round_button:
         next_round()
 
 def assign_villain():
+    global villain_to_be_assigned, player_assigned_villains, villains_updated
     assigned_villain = random.choice(villains_updated)
-    villains_updated.remove(assigned_villain)
-    return assigned_villain
+    if assigned_villain in player_assigned_villains:
+        assign_villain()
+    else:
+        player_assigned_villains.append(assigned_villain)
+        villain_to_be_assigned = assigned_villain
 
-def round(list):
-    for player in list:
-        villain = assign_villain(list[player])
-        messagebox.showinfo(f"{list[player]} will play as {villain}")
+def player_setup():
+    global players, villains_updated
+    for player in players:  
+        assign_villain()
+        if villain_to_be_assigned not in player.villains_played:
+            player.villain = villain_to_be_assigned
+            player.villains_played = villain_to_be_assigned
+        else:
+            player_setup()
 
 def number_entry(player_num, villain_num):
     # Function to retrieve user input for number of players, save it in a global variable and display it.
@@ -50,9 +56,8 @@ def number_entry(player_num, villain_num):
         number_of_villains = int(villain_num)
     except ValueError:
         messagebox.showerror(title = "Not A Number", message = "Value entered is not a number")
-    for v in range(0, number_of_villains):
+    for v in range(0, number_of_players):
         assigned_villain = random.choice(villains)
-        villains.remove(assigned_villain)
         villains_updated.append(assigned_villain)
     arrange_frame_2(number_of_players)
     frame2.tkraise()
@@ -110,7 +115,7 @@ def arrange_frame_3():
 def next_round():
     pass
 
-def update_player():
+def update_player_list():
     global players, player_entry_entries
     name_valid = False
     for entry in player_entry_entries:
@@ -120,13 +125,16 @@ def update_player():
         messagebox.showerror(title = "Input invalid", message = "Input entered was greater than 9 letters long or empty")
     else:
         for entry in player_entry_entries:  
-            villain = assign_villain()
             name = entry.get()
-            players.append(Player(name, villain, villains_played = villain))
-    arrange_frame_3()
+            players.append(Player(name))
     for player in players:
-        print(player.name, player.villain, player.score, player.villains)
+        player_setup()
+    arrange_frame_3()
+    #for player in players:
+     #   print(player.name, player.villain, player.score, player.villains_played)
     frame3.tkraise()
+
+
 
 root = Tk()
 root.title("Villainous Tournament")
@@ -159,7 +167,7 @@ frame2 = ttk.Frame(root, padding = "3 3 12 12")
 frame2.grid(column = 0, row = 0, sticky = (W, S, N, E))
 frame2.columnconfigure(1, weight=1)
 frame2.columnconfigure(2, weight=1)
-submit_button_2 = Button(frame2, width = 7, text = "Submit", command = update_player)
+submit_button_2 = Button(frame2, width = 7, text = "Submit", command = update_player_list)
 back_button = Button(frame2, width = 7, text = "Back", command = go_back)
 
 frame3 = ttk.Frame(root, padding = "3 3 12 12")
