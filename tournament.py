@@ -2,6 +2,7 @@ from tkinter import *
 from tkinter import ttk
 from tkinter import messagebox
 import random
+import RoundRobin
 
 class Player:
     def __init__(self, name, villain = "", score = 0, villains_played = []):
@@ -10,7 +11,13 @@ class Player:
         self.score = score    
         self.villains_played = villains_played
 
-villains = ["Scar", "Hades", "Captain Hook", "Jafar", "Maleficent", "Prince John", "Queen of Hearts", "Ursula", "Dr. Facilier", "Evil Queen", "Ratigan", "Yzma"]
+class Villain:
+    def __init__(self, name, score = 0):
+        self.name = name
+        self.score = score
+
+villainsList = ["Scar", "Hades", "Captain Hook", "Jafar", "Maleficent", "Prince John", "Queen of Hearts", "Ursula", "Dr. Facilier", "Evil Queen", "Ratigan", "Yzma"]
+villains = []
 villains_updated = []
 player_assigned_villains = []
 players = []
@@ -18,6 +25,9 @@ player_entry_entries = []
 number_of_players = None
 number_of_villains = None
 villain_to_be_assigned = None
+
+for villain in villainsList:
+    villains.append(Villain(villain))
 
 def handle_enter(event):
     if frame.focus_get() == submit_button:
@@ -32,11 +42,11 @@ def handle_enter(event):
 def assign_villain():
     global villain_to_be_assigned, player_assigned_villains, villains_updated
     assigned_villain = random.choice(villains_updated)
-    if assigned_villain in player_assigned_villains:
-        assign_villain()
-    else:
+    if assigned_villain not in player_assigned_villains:
         player_assigned_villains.append(assigned_villain)
         villain_to_be_assigned = assigned_villain
+    else:
+        assign_villain()
 
 def player_setup():
     global players, villains_updated
@@ -108,12 +118,12 @@ def arrange_frame_3():
     for player in players:
         Label(frame3, text = "Player").grid(row = i, column = 1, sticky = (W))
         Label(frame3, text = player.name).grid(row = i, column = 2, sticky = (W))
-        Label(frame3, text = player.villain).grid(row = i, column = 3, sticky = (W))
+        Label(frame3, text = player.villain.name).grid(row = i, column = 3, sticky = (W))
         i += 1
     next_round_button.grid(row = i + 1, column = 1, columnspan = 3, sticky = (W, E, N, S))
 
 def next_round():
-    pass
+    RoundRobin.updateScore(players, villains)
 
 def update_player_list():
     global players, player_entry_entries
@@ -127,8 +137,8 @@ def update_player_list():
         for entry in player_entry_entries:  
             name = entry.get()
             players.append(Player(name))
-    for player in players:
-        player_setup()
+    
+    player_setup()
     arrange_frame_3()
     #for player in players:
      #   print(player.name, player.villain, player.score, player.villains_played)
