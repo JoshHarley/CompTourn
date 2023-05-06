@@ -25,6 +25,7 @@ player_entry_entries = []
 number_of_players = None
 number_of_villains = None
 villain_to_be_assigned = None
+round_num = 1
 
 for villain in villainsList:
     villains.append(Villain(villain))
@@ -36,7 +37,7 @@ def handle_enter(event):
         update_player_list()
     elif frame2.focus_get() == back_button:
         go_back()
-    elif frame2.focus_get() == next_round_button:
+    elif frame2.focus_get() == round_result_button:
         next_round()
 
 def assign_villain():
@@ -49,7 +50,7 @@ def assign_villain():
         assign_villain()
 
 def player_setup():
-    global players, villains_updated
+    global players, villains_updated, player_assigned_villains
     for player in players:  
         assign_villain()
         if villain_to_be_assigned not in player.villains_played:
@@ -57,6 +58,8 @@ def player_setup():
             player.villains_played = villain_to_be_assigned
         else:
             player_setup()
+    player_assigned_villains.clear()
+    
 
 def number_entry(player_num, villain_num):
     # Function to retrieve user input for number of players, save it in a global variable and display it.
@@ -112,21 +115,42 @@ def arrange_frame_2(number):
     submit_button_2.grid(column = 1, row = last_row, sticky = (W, S, N, E))
     back_button.grid(column = 2, row = last_row, sticky = (W, S, N, E))
 
-def arrange_frame_3():
+def arrange_frame_3(round):
     i = 1
-    Label(frame3, text = "First Round").grid(row = 0, column = 1, sticky = (W), columnspan = 3)
+    Label(frame3, text = round).grid(row = 0, column = 1, sticky = (W), columnspan = 3)
     for player in players:
         Label(frame3, text = "Player").grid(row = i, column = 1, sticky = (W))
         Label(frame3, text = player.name).grid(row = i, column = 2, sticky = (W))
         Label(frame3, text = player.villain.name).grid(row = i, column = 3, sticky = (W))
         i += 1
-    next_round_button.grid(row = i + 1, column = 1, columnspan = 3, sticky = (W, E, N, S))
+    round_result_button.grid(row = i + 1, column = 1, columnspan = 3, sticky = (W, E, N, S))
 
-def next_round():
-    RoundRobin.updateScore(players, villains)
+def round_result():
+    for widget in frame3.winfo_children():
+       widget.destroy()
+    player_name_check = (frame2.register(player_name_validation))
+    frame3.rowconfigure(1, weight=1)
+    frame3.rowconfigure(2, weight=1)
+    frame3.columnconfigure(1, weight=1)
+    frame3.columnconfigure(2, weight=1)
+    Label(frame3, text = f"Enter the winner of round {round_num - 1}").grid(row = 1, column = 1)
+    winner = StringVar()
+    winner_entry = Entry(frame3, textvariable = winner, validate = 'key', validatecommand = (player_name_check, '%S'))
+    winner_entry.grid(row = 1, column = 2)
+    next_round_button = Button(frame3, width = 7, text = "Next Round", command = lambda: next_round(winner_entry.get()))
+    next_round_button.grid(row = 2, column = 1, columnspan = 2, sticky = (W, E, N, S))
+    
+
+def next_round(result):
+    global players, villains_updated
+    RoundRobin.updateScore(result, players, villains_updated)
+    player_setup()
+    for widget in frame3.winfo_children():
+       widget.destroy()
+    arrange_frame_3()
 
 def update_player_list():
-    global players, player_entry_entries
+    global players, player_entry_entries, round_num
     name_valid = False
     for entry in player_entry_entries:
         if (len(entry.get()) > 9 or len(entry.get()) < 1):
@@ -139,7 +163,8 @@ def update_player_list():
             players.append(Player(name))
     
     player_setup()
-    arrange_frame_3()
+    arrange_frame_3(f'Round {round_num}')
+    round_num += 1
     #for player in players:
      #   print(player.name, player.villain, player.score, player.villains_played)
     frame3.tkraise()
@@ -186,7 +211,7 @@ frame3.rowconfigure(1, weight=1)
 frame3.rowconfigure(2, weight=1)
 frame3.columnconfigure(1, weight=1)
 frame3.columnconfigure(2, weight=1)
-next_round_button = Button(frame3, width = 7, text = "Next Round", command = next_round)
+round_result_button = Button(frame3, width = 7, text = "Next Round", command = round_result)
 
 ttk.Label(frame2, text = "Enter the player names: ").grid(column = 1, row = 1, sticky = (W, S, N, E))
 
