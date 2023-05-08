@@ -24,7 +24,7 @@ players = []
 player_entry_entries = []
 number_of_players = None
 number_of_villains = None
-villain_to_be_assigned = None
+villain_to_be_assigned = []
 round_num = 1
 
 for villain in villainsList:
@@ -45,17 +45,18 @@ def assign_villain():
     assigned_villain = random.choice(villains_updated)
     if assigned_villain not in player_assigned_villains:
         player_assigned_villains.append(assigned_villain)
-        villain_to_be_assigned = assigned_villain
+        villain_to_be_assigned.append(assigned_villain)
     else:
         assign_villain()
 
 def player_setup():
-    global players, villains_updated, player_assigned_villains
+    global players, villains_updated, player_assigned_villains, round_num
     for player in players:  
         assign_villain()
-        if villain_to_be_assigned not in player.villains_played:
-            player.villain = villain_to_be_assigned
-            player.villains_played = villain_to_be_assigned
+        if villain_to_be_assigned not in player.villains_played and villain_to_be_assigned[0] in player_assigned_villains:
+            player.villain = villain_to_be_assigned[0]
+            player.villains_played += villain_to_be_assigned
+            villain_to_be_assigned.clear()
         else:
             player_setup()
     player_assigned_villains.clear()
@@ -116,30 +117,76 @@ def arrange_frame_2(number):
     back_button.grid(column = 2, row = last_row, sticky = (W, S, N, E))
 
 def arrange_frame_3(round):
+    global round_num
     i = 1
-    Label(frame3, text = round).grid(row = 0, column = 1, sticky = (W), columnspan = 3)
+    Label(frame3, text = f'Round {round}').grid(row = 0, column = 1, sticky = (W), columnspan = 3)
     for player in players:
         Label(frame3, text = "Player").grid(row = i, column = 1, sticky = (W))
         Label(frame3, text = player.name).grid(row = i, column = 2, sticky = (W))
         Label(frame3, text = player.villain.name).grid(row = i, column = 3, sticky = (W))
         i += 1
+    round_result_button = Button(frame3, width = 7, text = "Next Round", command = round_result)
     round_result_button.grid(row = i + 1, column = 1, columnspan = 3, sticky = (W, E, N, S))
+    round_num += 1
 
 def round_result():
-    for widget in frame3.winfo_children():
-       widget.destroy()
-    player_name_check = (frame2.register(player_name_validation))
-    frame3.rowconfigure(1, weight=1)
-    frame3.rowconfigure(2, weight=1)
-    frame3.columnconfigure(1, weight=1)
-    frame3.columnconfigure(2, weight=1)
-    Label(frame3, text = f"Enter the winner of round {round_num - 1}").grid(row = 1, column = 1)
-    winner = StringVar()
-    winner_entry = Entry(frame3, textvariable = winner, validate = 'key', validatecommand = (player_name_check, '%S'))
-    winner_entry.grid(row = 1, column = 2)
-    next_round_button = Button(frame3, width = 7, text = "Next Round", command = lambda: next_round(winner_entry.get()))
-    next_round_button.grid(row = 2, column = 1, columnspan = 2, sticky = (W, E, N, S))
+    if round_num > len(villains_updated):
+        for widget in frame3.winfo_children():
+            widget.destroy()
+            player_name_check = (frame3.register(player_name_validation))
+            frame3.rowconfigure(1, weight=1)
+            frame3.rowconfigure(2, weight=1)
+            frame3.columnconfigure(1, weight=1)
+            frame3.columnconfigure(2, weight=1)
+            Label(frame3, text = f"Enter the winner of round {round_num - 1}").grid(row = 1, column = 1)
+            winner = StringVar()
+            winner_entry = Entry(frame3, textvariable = winner, validate = 'key', validatecommand = (player_name_check, '%S'))
+            winner_entry.grid(row = 1, column = 2)
+            next_round_button = Button(frame3, width = 7, text = "End Game", command = lambda: final_result(winner_entry.get()))
+            next_round_button.grid(row = 2, column = 1, columnspan = 2, sticky = (W, E, N, S))
+    else:
+        for widget in frame3.winfo_children():
+            widget.destroy()
+            player_name_check = (frame3.register(player_name_validation))
+            frame3.rowconfigure(1, weight=1)
+            frame3.rowconfigure(2, weight=1)
+            frame3.columnconfigure(1, weight=1)
+            frame3.columnconfigure(2, weight=1)
+            Label(frame3, text = f"Enter the winner of round {round_num - 1}").grid(row = 1, column = 1)
+            winner = StringVar()
+            winner_entry = Entry(frame3, textvariable = winner, validate = 'key', validatecommand = (player_name_check, '%S'))
+            winner_entry.grid(row = 1, column = 2)
+            next_round_button = Button(frame3, width = 7, text = "Next Round", command = lambda: next_round(winner_entry.get()))
+            next_round_button.grid(row = 2, column = 1, columnspan = 2, sticky = (W, E, N, S))
     
+def final_result(result):
+    global players, villains_updated
+    pr = 2
+    vr = 1
+    RoundRobin.updateScore(result, players, villains_updated)
+    for widget in frame3.winfo_children():
+        widget.destroy()
+    Label(frame3, text = "Final Results: ").grid(row = 1, column = 1)
+    players.sort(key = lambda players: players.score, reverse = True)
+    villains_updated.sort(key = lambda villains: villains.score, reverse = True)
+    for player in players:
+        Label(frame3, text = f'{pr - 1}').grid(row = pr, column = 1)
+        Label(frame3, text = "Player Name: ").grid(row = pr, column = 2)
+        Label(frame3, text = f"{player.name}").grid(row = pr, column = 3)
+        Label(frame3, text = "Score: ").grid(row = pr, column = 4)
+        Label(frame3, text = f"{player.score}").grid(row = pr, column = 5)
+        pr += 1    
+    Label(frame3, text = "Villain Scores: ").grid(row = pr, column = 1)
+    pr += 1
+    for villain in villains_updated:
+        Label(frame3, text = f'{vr}').grid(row = pr, column = 1)
+        Label(frame3, text = "Villain Name: ").grid(row = pr, column = 2)
+        Label(frame3, text = f"{villain.name}").grid(row = pr, column = 3)
+        Label(frame3, text = "Score: ").grid(row = pr, column = 4)
+        Label(frame3, text = f"{villain.score}").grid(row = pr, column = 5)
+        vr += 1
+        pr += 1
+
 
 def next_round(result):
     global players, villains_updated
@@ -147,7 +194,7 @@ def next_round(result):
     player_setup()
     for widget in frame3.winfo_children():
        widget.destroy()
-    arrange_frame_3()
+    arrange_frame_3(round_num)
 
 def update_player_list():
     global players, player_entry_entries, round_num
@@ -164,9 +211,6 @@ def update_player_list():
     
     player_setup()
     arrange_frame_3(f'Round {round_num}')
-    round_num += 1
-    #for player in players:
-     #   print(player.name, player.villain, player.score, player.villains_played)
     frame3.tkraise()
 
 
@@ -211,7 +255,6 @@ frame3.rowconfigure(1, weight=1)
 frame3.rowconfigure(2, weight=1)
 frame3.columnconfigure(1, weight=1)
 frame3.columnconfigure(2, weight=1)
-round_result_button = Button(frame3, width = 7, text = "Next Round", command = round_result)
 
 ttk.Label(frame2, text = "Enter the player names: ").grid(column = 1, row = 1, sticky = (W, S, N, E))
 
