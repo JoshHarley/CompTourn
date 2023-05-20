@@ -3,18 +3,10 @@ from tkinter import ttk
 from tkinter import messagebox
 import random
 import RoundRobin
+import Round_Setup
+import Tourn_Classes
 
-class Player:
-    def __init__(self, name, villain = "", score = 0, villains_played = []):
-        self.name = name
-        self.villain = villain
-        self.score = score    
-        self.villains_played = villains_played
 
-class Villain:
-    def __init__(self, name, score = 0):
-        self.name = name
-        self.score = score
 
 villainsList = ["Scar", "Hades", "Captain Hook", "Jafar", "Maleficent", "Prince John", "Queen of Hearts", "Ursula", "Dr. Facilier", "Evil Queen", "Ratigan", "Yzma"]
 villains = []
@@ -26,9 +18,11 @@ number_of_players = None
 number_of_villains = None
 villain_to_be_assigned = []
 round_num = 1
+setup = Tourn_Classes.Setup()
 
 for villain in villainsList:
-    villains.append(Villain(villain))
+    villains.append(Tourn_Classes.Villain(villain))
+
 
 def handle_enter(event):
     if frame.focus_get() == submit_button:
@@ -40,28 +34,6 @@ def handle_enter(event):
     elif frame2.focus_get() == round_result_button:
         next_round()
 
-def assign_villain():
-    global villain_to_be_assigned, player_assigned_villains, villains_updated
-    assigned_villain = random.choice(villains_updated)
-    if assigned_villain not in player_assigned_villains:
-        player_assigned_villains.append(assigned_villain)
-        villain_to_be_assigned.append(assigned_villain)
-    else:
-        assign_villain()
-
-def player_setup():
-    global players, villains_updated, player_assigned_villains, round_num
-    for player in players:  
-        assign_villain()
-        if villain_to_be_assigned not in player.villains_played and villain_to_be_assigned[0] in player_assigned_villains:
-            player.villain = villain_to_be_assigned[0]
-            player.villains_played += villain_to_be_assigned
-            villain_to_be_assigned.clear()
-        else:
-            player_setup()
-    player_assigned_villains.clear()
-    
-
 def number_entry(player_num, villain_num):
     # Function to retrieve user input for number of players, save it in a global variable and display it.
     global number_of_players, number_of_villains, villains
@@ -70,9 +42,9 @@ def number_entry(player_num, villain_num):
         number_of_villains = int(villain_num)
     except ValueError:
         messagebox.showerror(title = "Not A Number", message = "Value entered is not a number")
-    for v in range(0, number_of_players):
+    for v in range(0, number_of_villains):
         assigned_villain = random.choice(villains)
-        villains_updated.append(assigned_villain)
+        setup.villains.append(assigned_villain)
     arrange_frame_2(number_of_players)
     frame2.tkraise()
 
@@ -101,7 +73,7 @@ def go_back():
     frame2.grid_forget()
 
 def arrange_frame_2(number):
-    global players, player_entry_entries
+    global player_entry_entries
     player_name_check = (frame2.register(player_name_validation))
     last_row = 2
     for i in range(1, number + 1):
@@ -120,17 +92,17 @@ def arrange_frame_3(round):
     global round_num
     i = 1
     Label(frame3, text = f'Round {round}').grid(row = 0, column = 1, sticky = (W), columnspan = 3)
-    for player in players:
+    for player in setup.players:
         Label(frame3, text = "Player").grid(row = i, column = 1, sticky = (W))
         Label(frame3, text = player.name).grid(row = i, column = 2, sticky = (W))
-        Label(frame3, text = player.villain.name).grid(row = i, column = 3, sticky = (W))
+        Label(frame3, text = player.villain).grid(row = i, column = 3, sticky = (W))
         i += 1
-    round_result_button = Button(frame3, width = 7, text = "Next Round", command = round_result)
+    round_result_button = Button(frame3, width = 7, text = "Round Result", command = round_result)
     round_result_button.grid(row = i + 1, column = 1, columnspan = 3, sticky = (W, E, N, S))
     round_num += 1
 
 def round_result():
-    if round_num > len(villains_updated):
+    if round_num > len(setup.villains):
         for widget in frame3.winfo_children():
             widget.destroy()
             player_name_check = (frame3.register(player_name_validation))
@@ -160,38 +132,34 @@ def round_result():
             next_round_button.grid(row = 2, column = 1, columnspan = 2, sticky = (W, E, N, S))
     
 def final_result(result):
-    global players, villains_updated
     pr = 2
     vr = 1
-    RoundRobin.updateScore(result, players, villains_updated)
+    RoundRobin.updateScore(result, setup.players, setup.villains)
     for widget in frame3.winfo_children():
         widget.destroy()
-    Label(frame3, text = "Final Results: ").grid(row = 1, column = 1)
-    players.sort(key = lambda players: players.score, reverse = True)
-    villains_updated.sort(key = lambda villains: villains.score, reverse = True)
-    for player in players:
+    setup.players.sort(key = lambda players: players.score, reverse = True)
+    setup.villains.sort(key = lambda villains: villains.score, reverse = True)
+    Label(frame3, text = f"Final Results:   {setup.players[0].name} wins!!!").grid(row = 1, column = 1)
+    for player in setup.players:
         Label(frame3, text = f'{pr - 1}').grid(row = pr, column = 1)
-        Label(frame3, text = "Player Name: ").grid(row = pr, column = 2)
-        Label(frame3, text = f"{player.name}").grid(row = pr, column = 3)
-        Label(frame3, text = "Score: ").grid(row = pr, column = 4)
-        Label(frame3, text = f"{player.score}").grid(row = pr, column = 5)
+        Label(frame3, text = f"{player.name}").grid(row = pr, column = 2)
+        Label(frame3, text = "Score: ").grid(row = pr, column = 3)
+        Label(frame3, text = f"{player.score}").grid(row = pr, column = 4)
         pr += 1    
-    Label(frame3, text = "Villain Scores: ").grid(row = pr, column = 1)
+    Label(frame3, text = f"Villain Scores:    {setup.villains[0].name} wins!!!").grid(row = pr, column = 1)
     pr += 1
-    for villain in villains_updated:
+    for villain in setup.villains:
         Label(frame3, text = f'{vr}').grid(row = pr, column = 1)
-        Label(frame3, text = "Villain Name: ").grid(row = pr, column = 2)
-        Label(frame3, text = f"{villain.name}").grid(row = pr, column = 3)
-        Label(frame3, text = "Score: ").grid(row = pr, column = 4)
-        Label(frame3, text = f"{villain.score}").grid(row = pr, column = 5)
+        Label(frame3, text = f"{villain.name}").grid(row = pr, column = 2)
+        Label(frame3, text = "Score: ").grid(row = pr, column = 3)
+        Label(frame3, text = f"{villain.score}").grid(row = pr, column = 4)
         vr += 1
         pr += 1
 
 
 def next_round(result):
-    global players, villains_updated
-    RoundRobin.updateScore(result, players, villains_updated)
-    player_setup()
+    RoundRobin.updateScore(result, setup.players, setup.villains)
+    Round_Setup.player_setup(setup.players, setup.player_assigned_villains, setup.villains)
     for widget in frame3.winfo_children():
        widget.destroy()
     arrange_frame_3(round_num)
@@ -207,9 +175,9 @@ def update_player_list():
     else:
         for entry in player_entry_entries:  
             name = entry.get()
-            players.append(Player(name))
+            setup.players.append(Tourn_Classes.Player(name))
     
-    player_setup()
+    Round_Setup.player_setup(setup.players, setup.player_assigned_villains, setup.villains)
     arrange_frame_3(f'Round {round_num}')
     frame3.tkraise()
 
